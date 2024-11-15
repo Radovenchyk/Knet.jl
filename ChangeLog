@@ -32,10 +32,12 @@
 	gpu: Error During Test at /kuacc/users/dyuret/.julia/dev/Knet/test/gpu.jl:3
 	Got exception outside of a @test
 	UndefVarError: `toolkit` not defined in `CUDA`
+	==> fixed
 
 	gcnode: Error During Test at /kuacc/users/dyuret/.julia/dev/Knet/test/gcnode.jl:8
 	Got exception outside of a @test
 	UndefVarError: `cudnnSetRNNDescriptor_v6` not defined in `cuDNN`
+	==> new version supports cudnnSetRNNDescriptor_v8 with totally different args, no handle?
 
 	bmm: Error During Test at /kuacc/users/dyuret/.julia/dev/Knet/test/bmm.jl:19
 	Test threw exception
@@ -50,6 +52,7 @@
 	/userfiles/dyuret/.julia/juliaup/julia-1.11.1+0.x64.linux.gnu/bin/julia: undefined symbol: jl_array_isassigned
 	[1] _ser_array_t(x::Any, T::Type, s::IdDict{Any, Any}, m::Val{2})
 	@ Knet.KnetArrays ~/.julia/dev/Knet/src/knetarrays/deepcopy.jl:64
+	==> rewrite based on ~/github/julia/base/deepcopy.jl
 
 	loss: Error During Test at /kuacc/users/dyuret/.julia/dev/Knet/test/loss.jl:17
 	Test threw exception

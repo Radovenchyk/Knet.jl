@@ -1,4 +1,4 @@
-using Test, Knet, CUDA, Pkg.Artifacts
+using Test, Knet, CUDA, cuDNN, Pkg.Artifacts
 
 @testset "gpu" begin
 if CUDA.functional()
@@ -10,9 +10,9 @@ if CUDA.functional()
     @test length(CUDA.devices()) > 0 # Knet.gpuCount() > 0
     @show CUDA.capability(CUDA.device())
     @show CUDA.warpsize(CUDA.device())
-    @show CUDA.toolkit() # Knet.tk
-    @show CUDA.version() # Knet.cudaDriverVersion
-    @test CUDA.version() > v"0" # Knet.cudaDriverVersion > 0
+    # @show CUDA.toolkit() # Knet.tk -- deprecated
+    @show CUDA.driver_version() # Knet.cudaDriverVersion
+    @test CUDA.driver_version() > v"0" # Knet.cudaDriverVersion > 0
     @show Mem.info() # Knet.cudaMemGetInfo()
     @test all(m->m>0, Mem.info()) # all(m->m>0, Knet.cudaMemGetInfo())
     @show CUDA.synchronize() # Knet.cudaDeviceSynchronize()
