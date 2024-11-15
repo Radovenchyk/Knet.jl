@@ -1,5 +1,5 @@
-import CUDA.CUDNN: cudnnActivationForwardAD
-using CUDA.CUDNN: cudnnActivationBackward, scalingParameter, handle
+import cuDNN: cudnnActivationForwardAD
+using cuDNN: cudnnActivationBackward, scalingParameter, handle
 using AutoGrad: AutoGrad, @primitive1, value
 
 @primitive1(

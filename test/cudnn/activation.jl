@@ -1,5 +1,5 @@
 using CUDA, Test, AutoGrad, Knet
-using CUDA.CUDNN: 
+using cuDNN: 
     cudnnActivationForward,
     cudnnActivationForward!,
     cudnnActivationBackward,

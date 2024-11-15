@@ -1,5 +1,5 @@
 using Test, CUDA, Random, Knet, AutoGrad
-using CUDA.CUDNN:
+using cuDNN:
     cudnnRNNForward,
     cudnnRNNForward!,
     cudnnRNNBackwardData_v8,

@@ -1,47 +1,48 @@
 import Knet.Ops20: conv4, conv4x, conv4w, pool, poolx
-using CUDA: CUDA, CUDNN, Mem
+using CUDA: CUDA, Mem
+import cuDNN
 using Knet.KnetArrays: DevArray, Cptr
 
-function conv4(w::R,x::R; handle=CUDNN.handle(), alpha=1,
+function conv4(w::R,x::R; handle=cuDNN.handle(), alpha=1,
                o...) where {T,R<:DevArray{T}} # padding=0, stride=1, dilation=1, mode=0, group=1
     beta=0 # nonzero beta does not make sense when we create y
     y = similar(x, cdims(w,x;o...))
     (algo,workSpace) = conv4_algo(w, x, y; handle=handle, o...)
-    CUDNN.cudnnConvolutionForward(handle,Ref(T(alpha)),TD(x),x,FD(w),w,CD(w,x;o...),algo,workSpace,bytes(workSpace),Ref(T(beta)),TD(y),y)
+    cuDNN.cudnnConvolutionForward(handle,Ref(T(alpha)),TD(x),x,FD(w),w,CD(w,x;o...),algo,workSpace,bytes(workSpace),Ref(T(beta)),TD(y),y)
     return y
 end
 
-function conv4x(w::R,x::R,dy::R; handle=CUDNN.handle(), alpha=1,
+function conv4x(w::R,x::R,dy::R; handle=cuDNN.handle(), alpha=1,
                    o...) where {T,R<:DevArray{T}} # padding=0, stride=1, dilation=1, mode=0, group=1
     beta = 0
     dx = similar(x)
     (algo,workSpace) = conv4x_algo(w,x,dy,dx; handle=handle, o...)
-    CUDNN.cudnnConvolutionBackwardData(handle,Ref(T(alpha)),FD(w),w,TD(dy),dy,CD(w,x;o...),algo,workSpace,bytes(workSpace),Ref(T(beta)),TD(dx),dx)
+    cuDNN.cudnnConvolutionBackwardData(handle,Ref(T(alpha)),FD(w),w,TD(dy),dy,CD(w,x;o...),algo,workSpace,bytes(workSpace),Ref(T(beta)),TD(dx),dx)
     return dx
 end
 
-function conv4w(w::R,x::R,dy::R; handle=CUDNN.handle(), alpha=1,
+function conv4w(w::R,x::R,dy::R; handle=cuDNN.handle(), alpha=1,
                    o...) where {T,R<:DevArray{T}} # padding=0, stride=1, dilation=1, mode=0, group=1
     beta = 0
     dw = similar(w)
     (algo,workSpace) = conv4w_algo(w,x,dy,dw;handle=handle,o...)
-    CUDNN.cudnnConvolutionBackwardFilter(handle,Ref(T(alpha)),TD(x),x,TD(dy),dy,CD(w,x;o...),algo,workSpace,bytes(workSpace),Ref(T(beta)),FD(dw),dw)
+    cuDNN.cudnnConvolutionBackwardFilter(handle,Ref(T(alpha)),TD(x),x,TD(dy),dy,CD(w,x;o...),algo,workSpace,bytes(workSpace),Ref(T(beta)),FD(dw),dw)
     return dw
 end
 
-function pool(x::R; handle=CUDNN.handle(), alpha=1,
+function pool(x::R; handle=cuDNN.handle(), alpha=1,
                  o...) where {T,R<:DevArray{T}} # window=2, padding=0, stride=window, mode=0, maxpoolingNanOpt=0
     y = similar(x, pdims(x; o...))
     beta = 0
-    CUDNN.cudnnPoolingForward(handle,PD(x;o...),Ref(T(alpha)),TD(x),x,    Ref(T(beta)),TD(y),y)
+    cuDNN.cudnnPoolingForward(handle,PD(x;o...),Ref(T(alpha)),TD(x),x,    Ref(T(beta)),TD(y),y)
     return y
 end
 
-function poolx(x::R,y::R,dy::R; handle=CUDNN.handle(), alpha=1, mode=0,
+function poolx(x::R,y::R,dy::R; handle=cuDNN.handle(), alpha=1, mode=0,
                   o...) where {T,R<:DevArray{T}} # window=2, padding=0, stride=window, maxpoolingNanOpt=0
     dx = similar(x)
     beta = 0
-    CUDNN.cudnnPoolingBackward(handle,PD(x;mode=mode,o...),Ref(T(alpha)),TD(y),y,TD(dy),dy,TD(x),x,Ref(T(beta)),TD(dx),dx)
+    cuDNN.cudnnPoolingBackward(handle,PD(x;mode=mode,o...),Ref(T(alpha)),TD(y),y,TD(dy),dy,TD(x),x,Ref(T(beta)),TD(dx),dx)
     return dx
 end
 
@@ -53,15 +54,15 @@ TD(a::DevArray{T}) where {T} = TD(T,size(a))
 TD(T::Type, dims::Integer...) = TD(T, dims)
 function TD(T::Type, dims)
     d = Cptr[0]
-    CUDNN.cudnnCreateTensorDescriptor(d)
+    cuDNN.cudnnCreateTensorDescriptor(d)
     n = length(dims)
     sz = [Cint(dims[i]) for i=n:-1:1]
     st = similar(sz); st[n] = 1
     for i=(n-1):-1:1; st[i] = st[i+1] * sz[i+1]; end
-    dt = CUDNN.cudnnDataType_t(DT(T))
-    CUDNN.cudnnSetTensorNdDescriptor(d[1], dt, n, sz, st)
+    dt = cuDNN.cudnnDataType_t(DT(T))
+    cuDNN.cudnnSetTensorNdDescriptor(d[1], dt, n, sz, st)
     td = TD(d[1])
-    finalizer(x->CUDNN.cudnnDestroyTensorDescriptor(x.ptr), td)
+    finalizer(x->cuDNN.cudnnDestroyTensorDescriptor(x.ptr), td)
     return td
 end
 
@@ -70,41 +71,41 @@ FD(a::DevArray{T}) where {T}=FD(T,size(a))
 FD(T::Type, dims::Integer...) = FD(T,dims)
 function FD(T::Type, dims)
     d = Cptr[0]
-    CUDNN.cudnnCreateFilterDescriptor(d)
+    cuDNN.cudnnCreateFilterDescriptor(d)
     n = length(dims)
     sz = [Cint(dims[i]) for i=n:-1:1]
-    dt = CUDNN.cudnnDataType_t(DT(T))
-    tf = CUDNN.cudnnTensorFormat_t(0)
-    CUDNN.cudnnSetFilterNdDescriptor(d[1], dt, tf, n, sz)
+    dt = cuDNN.cudnnDataType_t(DT(T))
+    tf = cuDNN.cudnnTensorFormat_t(0)
+    cuDNN.cudnnSetFilterNdDescriptor(d[1], dt, tf, n, sz)
     fd = FD(d[1])
-    finalizer(x->CUDNN.cudnnDestroyFilterDescriptor(x.ptr), fd)
+    finalizer(x->cuDNN.cudnnDestroyFilterDescriptor(x.ptr), fd)
     return fd
 end
 
 mutable struct CD; ptr; end
 function CD(w::DevArray,x::DevArray; padding=0, stride=1, dilation=1, mode=0, group=1)
     d = Cptr[0]
-    CUDNN.cudnnCreateConvolutionDescriptor(d)
+    cuDNN.cudnnCreateConvolutionDescriptor(d)
     cd = CD(d[1])
     nd = ndims(x)-2
-    dt = CUDNN.cudnnDataType_t(DT(x))
-    mode = CUDNN.cudnnConvolutionMode_t(mode)
-    CUDNN.cudnnSetConvolutionNdDescriptor(cd,nd,cdsize(padding,nd),cdsize(stride,nd),cdsize(dilation,nd),mode,dt)
-    CUDNN.cudnnSetConvolutionGroupCount(cd,group)
-    finalizer(x->CUDNN.cudnnDestroyConvolutionDescriptor(x.ptr),cd)
+    dt = cuDNN.cudnnDataType_t(DT(x))
+    mode = cuDNN.cudnnConvolutionMode_t(mode)
+    cuDNN.cudnnSetConvolutionNdDescriptor(cd,nd,cdsize(padding,nd),cdsize(stride,nd),cdsize(dilation,nd),mode,dt)
+    cuDNN.cudnnSetConvolutionGroupCount(cd,group)
+    finalizer(x->cuDNN.cudnnDestroyConvolutionDescriptor(x.ptr),cd)
     return cd
 end
 
 mutable struct PD; ptr; end
 function PD(x::DevArray; window=2, padding=0, stride=window, mode=0, maxpoolingNanOpt=0)
     d = Cptr[0]
-    CUDNN.cudnnCreatePoolingDescriptor(d)
+    cuDNN.cudnnCreatePoolingDescriptor(d)
     nd = ndims(x)-2
-    mode = CUDNN.cudnnPoolingMode_t(mode)
-    maxpoolingNanOpt = CUDNN.cudnnNanPropagation_t(maxpoolingNanOpt)
-    CUDNN.cudnnSetPoolingNdDescriptor(d[1],mode,maxpoolingNanOpt,nd,cdsize(window,nd),cdsize(padding,nd),cdsize(stride,nd))
+    mode = cuDNN.cudnnPoolingMode_t(mode)
+    maxpoolingNanOpt = cuDNN.cudnnNanPropagation_t(maxpoolingNanOpt)
+    cuDNN.cudnnSetPoolingNdDescriptor(d[1],mode,maxpoolingNanOpt,nd,cdsize(window,nd),cdsize(padding,nd),cdsize(stride,nd))
     pd = PD(d[1])
-    finalizer(x->CUDNN.cudnnDestroyPoolingDescriptor(x.ptr), pd)
+    finalizer(x->cuDNN.cudnnDestroyPoolingDescriptor(x.ptr), pd)
     return pd
 end
 
@@ -156,7 +157,7 @@ gpufree() = Mem.info()[1] + (isdefined(CUDA,:pool) ? CUDA.pool[].cached_memory()
 maxWorkspaceSize(w,x,y) = min(gpufree() ÷ 10, bytes(x) * 100)
 
 const conv4_algos = Dict()
-function conv4_algo(w::R, x::R, y::R; handle=CUDNN.handle(), o...) where {T,R<:DevArray{T}}
+function conv4_algo(w::R, x::R, y::R; handle=cuDNN.handle(), o...) where {T,R<:DevArray{T}}
     key = (T,size(w),size(x),o...)
     if haskey(conv4_algos, key)
         p = conv4_algos[key]
@@ -164,9 +165,9 @@ function conv4_algo(w::R, x::R, y::R; handle=CUDNN.handle(), o...) where {T,R<:D
         p = nothing
     else
         workSpace = similar(w, maxWorkspaceSize(w,x,y) ÷ sizeof(T))
-        perfResults = Array{CUDNN.cudnnConvolutionFwdAlgoPerf_t}(undef,requestedAlgoCount)
+        perfResults = Array{cuDNN.cudnnConvolutionFwdAlgoPerf_t}(undef,requestedAlgoCount)
         wd, xd, yd, cd = FD(w), TD(x), TD(y), CD(w,x;o...)
-        CUDNN.cudnnFindConvolutionForwardAlgorithmEx(handle,xd,x,wd,w,cd,yd,y,requestedAlgoCount,returnedAlgoCount,perfResults,workSpace,bytes(workSpace))
+        cuDNN.cudnnFindConvolutionForwardAlgorithmEx(handle,xd,x,wd,w,cd,yd,y,requestedAlgoCount,returnedAlgoCount,perfResults,workSpace,bytes(workSpace))
         p = perfChoose(perfResults, returnedAlgoCount[1])
         conv4_algos[key] = p
         if p === nothing
@@ -174,14 +175,14 @@ function conv4_algo(w::R, x::R, y::R; handle=CUDNN.handle(), o...) where {T,R<:D
         end
     end
     if p === nothing
-        return (CUDNN.cudnnConvolutionFwdAlgo_t(0), cudnnWorkSpace(w))
+        return (cuDNN.cudnnConvolutionFwdAlgo_t(0), cudnnWorkSpace(w))
     else
         return (p.algo, cudnnWorkSpace(w,p.memory))
     end
 end
 
 const conv4w_algos = Dict()
-function conv4w_algo(w::R,x::R,dy::R,dw::R; handle=CUDNN.handle(), o...) where {T,R<:DevArray{T}}
+function conv4w_algo(w::R,x::R,dy::R,dw::R; handle=cuDNN.handle(), o...) where {T,R<:DevArray{T}}
     key = (T,size(w),size(x),o...)
     if haskey(conv4w_algos, key)
         p = conv4w_algos[key]
@@ -189,9 +190,9 @@ function conv4w_algo(w::R,x::R,dy::R,dw::R; handle=CUDNN.handle(), o...) where {
         p = nothing
     else
         workSpace = similar(w, maxWorkspaceSize(w,x,dy) ÷ sizeof(T))
-        perfResults = Array{CUDNN.cudnnConvolutionBwdFilterAlgoPerf_t}(undef,requestedAlgoCount)
+        perfResults = Array{cuDNN.cudnnConvolutionBwdFilterAlgoPerf_t}(undef,requestedAlgoCount)
         wd, xd, yd, cd = FD(dw), TD(x), TD(dy), CD(w,x;o...)
-        CUDNN.cudnnFindConvolutionBackwardFilterAlgorithmEx(handle,xd,x,yd,dy,cd,wd,dw,requestedAlgoCount,returnedAlgoCount,perfResults,workSpace,bytes(workSpace))
+        cuDNN.cudnnFindConvolutionBackwardFilterAlgorithmEx(handle,xd,x,yd,dy,cd,wd,dw,requestedAlgoCount,returnedAlgoCount,perfResults,workSpace,bytes(workSpace))
         p = perfChoose(perfResults, returnedAlgoCount[1])
         conv4w_algos[key] = p
         if p === nothing
@@ -199,14 +200,14 @@ function conv4w_algo(w::R,x::R,dy::R,dw::R; handle=CUDNN.handle(), o...) where {
         end
     end
     if p === nothing
-        return (CUDNN.cudnnConvolutionBwdFilterAlgo_t(0), cudnnWorkSpace(w))
+        return (cuDNN.cudnnConvolutionBwdFilterAlgo_t(0), cudnnWorkSpace(w))
     else
         return (p.algo, cudnnWorkSpace(w, p.memory))
     end
 end
 
 const conv4x_algos = Dict()
-function conv4x_algo(w::R,x::R,dy::R,dx::R; handle=CUDNN.handle(), o...) where {T,R<:DevArray{T}}
+function conv4x_algo(w::R,x::R,dy::R,dx::R; handle=cuDNN.handle(), o...) where {T,R<:DevArray{T}}
     key = (T,size(w),size(x),o...)
     if haskey(conv4x_algos, key)
         p = conv4x_algos[key]
@@ -214,9 +215,9 @@ function conv4x_algo(w::R,x::R,dy::R,dx::R; handle=CUDNN.handle(), o...) where {
         p = nothing
     else
         workSpace = similar(w, maxWorkspaceSize(w,x,dy) ÷ sizeof(T))
-        perfResults = Array{CUDNN.cudnnConvolutionBwdDataAlgoPerf_t}(undef,requestedAlgoCount)
+        perfResults = Array{cuDNN.cudnnConvolutionBwdDataAlgoPerf_t}(undef,requestedAlgoCount)
         wd, xd, yd, cd = FD(w), TD(dx), TD(dy), CD(w,x;o...)
-        CUDNN.cudnnFindConvolutionBackwardDataAlgorithmEx(handle,wd,w,yd,dy,cd,xd,dx,requestedAlgoCount,returnedAlgoCount,perfResults,workSpace,bytes(workSpace))
+        cuDNN.cudnnFindConvolutionBackwardDataAlgorithmEx(handle,wd,w,yd,dy,cd,xd,dx,requestedAlgoCount,returnedAlgoCount,perfResults,workSpace,bytes(workSpace))
         p = perfChoose(perfResults, returnedAlgoCount[1])
         conv4x_algos[key] = p
         if p === nothing
@@ -224,7 +225,7 @@ function conv4x_algo(w::R,x::R,dy::R,dx::R; handle=CUDNN.handle(), o...) where {
         end
     end
     if p === nothing
-        return (CUDNN.cudnnConvolutionBwdDataAlgo_t(0), cudnnWorkSpace(w))
+        return (cuDNN.cudnnConvolutionBwdDataAlgo_t(0), cudnnWorkSpace(w))
     else
         return (p.algo, cudnnWorkSpace(w, p.memory))
     end

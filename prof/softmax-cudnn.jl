@@ -2,7 +2,7 @@
 
 using CUDA, NNlib, BenchmarkTools, Knet, Test
 using NNlib: softmax, softmax!, ∇softmax, ∇softmax!, logsoftmax, logsoftmax!, ∇logsoftmax, ∇logsoftmax!
-using CUDA.CUDNN: _softmax!, _∇softmax!, _logsoftmax!, _∇logsoftmax!
+using cuDNN: _softmax!, _∇softmax!, _logsoftmax!, _∇logsoftmax!
 
 x,y,dx,dy = (CUDA.randn(1024, 256) for i in 1:4)
 

@@ -1,7 +1,8 @@
 import Knet.Ops20: rnnforw
 using Knet.Ops20: RNN
 using Knet.KnetArrays: DevArray, KnetArray, Cptr
-using CUDA: CuArray, CUDNN, CU_NULL
+using CUDA: CuArray, CU_NULL
+import cuDNN
 using AutoGrad: AutoGrad, @primitive1, value, recording, Param, Value
 
 "RNN descriptor"
@@ -17,37 +18,37 @@ Base.unsafe_convert(::Type{Cptr}, dd::DD)=dd.ptr
 Base.unsafe_convert(::Type{Cptr}, rd::RD)=rd.ptr
 Base.unsafe_convert(::Type{Ptr{Cptr}}, tds::TDs)=pointer(tds.pvec)
 
-function DD(; atype, handle=CUDNN.handle(), dropout=0.0, seed=0, o...)
+function DD(; atype, handle=cuDNN.handle(), dropout=0.0, seed=0, o...)
     if seed==0; seed=floor(Culonglong,time()); end
     d = Cptr[0]; s = Csize_t[0] # TODO: Can multiple RNNs share dropout descriptors? Can dropout probability be changed?
-    CUDNN.cudnnCreateDropoutDescriptor(d)
-    CUDNN.cudnnDropoutGetStatesSize(handle,s)
+    cuDNN.cudnnCreateDropoutDescriptor(d)
+    cuDNN.cudnnDropoutGetStatesSize(handle,s)
     states = rnnworkspace(s[1], atype)
-    @cudnn_retry CUDNN.unsafe_cudnnSetDropoutDescriptor(d[1],handle,dropout,states,bytes(states),seed)
+    @cudnn_retry cuDNN.unchecked_cudnnSetDropoutDescriptor(d[1],handle,dropout,states,bytes(states),seed)
     dd = DD(d[1],states)
-    finalizer(x->CUDNN.cudnnDestroyDropoutDescriptor(x.ptr),dd)
+    finalizer(x->cuDNN.cudnnDestroyDropoutDescriptor(x.ptr),dd)
     return dd
 end
 
 function RD()
     d = Cptr[0]
-    @cudnn_retry CUDNN.unsafe_cudnnCreateRNNDescriptor(d)
+    @cudnn_retry cuDNN.unchecked_cudnnCreateRNNDescriptor(d)
     rd = RD(d[1])
-    finalizer(x->CUDNN.cudnnDestroyRNNDescriptor(x.ptr),rd)
+    finalizer(x->cuDNN.cudnnDestroyRNNDescriptor(x.ptr),rd)
     return rd
 end
 
-function RD(hiddenSize,numLayers,dropoutDesc,inputMode,direction,mode,algo,dataType; handle=CUDNN.handle())
+function RD(hiddenSize,numLayers,dropoutDesc,inputMode,direction,mode,algo,dataType; handle=cuDNN.handle())
     rnnDesc = RD()
-    inputMode = CUDNN.cudnnRNNInputMode_t(inputMode)
-    direction = CUDNN.cudnnDirectionMode_t(direction)
-    mode = CUDNN.cudnnRNNMode_t(mode)
-    algo = CUDNN.cudnnRNNAlgo_t(algo)
-    dt = CUDNN.cudnnDataType_t(DT(dataType))
-    if CUDNN.version() < v"8"
-        CUDNN.cudnnSetRNNDescriptor(handle,rnnDesc,hiddenSize,numLayers,dropoutDesc,inputMode,direction,mode,algo,dt)
+    inputMode = cuDNN.cudnnRNNInputMode_t(inputMode)
+    direction = cuDNN.cudnnDirectionMode_t(direction)
+    mode = cuDNN.cudnnRNNMode_t(mode)
+    algo = cuDNN.cudnnRNNAlgo_t(algo)
+    dt = cuDNN.cudnnDataType_t(DT(dataType))
+    if cuDNN.version() < v"8"
+        cuDNN.cudnnSetRNNDescriptor(handle,rnnDesc,hiddenSize,numLayers,dropoutDesc,inputMode,direction,mode,algo,dt)
     else
-        CUDNN.cudnnSetRNNDescriptor_v6(handle,rnnDesc,hiddenSize,numLayers,dropoutDesc,inputMode,direction,mode,algo,dt)
+        cuDNN.cudnnSetRNNDescriptor_v6(handle,rnnDesc,hiddenSize,numLayers,dropoutDesc,inputMode,direction,mode,algo,dt)
     end
     return rnnDesc
 end
@@ -89,14 +90,14 @@ end
 
 
 function rnnforw(r::RNN, w, x::Union{DevArray{T},Value{<:DevArray{T}}}, hx=nothing, cx=nothing;
-                 handle=CUDNN.handle(), batchSizes=nothing, hy = (hx != nothing), cy = (cx != nothing && r.mode == 2)) where T
+                 handle=cuDNN.handle(), batchSizes=nothing, hy = (hx != nothing), cy = (cx != nothing && r.mode == 2)) where T
     @assert value(w) === value(r.w)
     @assert size(x,1) == r.inputSize
     x3 = reshape(value(x), size(x,1), size(x,2), size(x,3))
     @assert typeof(x3) == typeof(value(w)) "$(typeof(value(w))) weights do not match $(typeof(x)) input. Please use RNN(;atype) option."
     if r.rnnDesc === nothing    # initialize rnn for gpu with first input
         r.dataType = eltype(x3)
-        r.dropoutDesc = DD(handle=CUDNN.handle(),dropout=r.dropout,seed=r.seed,atype=typeof(x3))
+        r.dropoutDesc = DD(handle=cuDNN.handle(),dropout=r.dropout,seed=r.seed,atype=typeof(x3))
         r.rnnDesc = RD(r.hiddenSize,r.numLayers,r.dropoutDesc,r.inputMode,r.direction,r.mode,r.algo,r.dataType)
     end
     _rnnforw(w,x,hx,cx; rnn=r,handle=handle,batchSizes=batchSizes,hy=hy,cy=cy)
@@ -141,10 +142,10 @@ function _rnnforw(w, x, hx, cx; rnn, handle, batchSizes, hy, cy)
     if AutoGrad.recording()
         rss = cudnnGetRNNTrainingReserveSize(rnn.rnnDesc, xtds; handle=handle)
         rs = rnnworkspace(rss, typeof(value(w)))
-        @cudnn_retry CUDNN.unsafe_cudnnRNNForwardTraining(handle, rnn.rnnDesc, seqLength, xtds, x, hxDesc, hx, cxDesc, cx, wDesc, w, ytds, y, hyDesc, hyout, cyDesc, cyout, ws, wss, rs, rss)
+        @cudnn_retry cuDNN.unchecked_cudnnRNNForwardTraining(handle, rnn.rnnDesc, seqLength, xtds, x, hxDesc, hx, cxDesc, cx, wDesc, w, ytds, y, hyDesc, hyout, cyDesc, cyout, ws, wss, rs, rss)
     else
         rs = nothing
-        @cudnn_retry CUDNN.unsafe_cudnnRNNForwardInference(handle, rnn.rnnDesc, seqLength, xtds, x, hxDesc, hx, cxDesc, cx, wDesc, w, ytds, y, hyDesc, hyout, cyDesc, cyout, ws, wss)
+        @cudnn_retry cuDNN.unchecked_cudnnRNNForwardInference(handle, rnn.rnnDesc, seqLength, xtds, x, hxDesc, hx, cxDesc, cx, wDesc, w, ytds, y, hyDesc, hyout, cyDesc, cyout, ws, wss)
     end
     if hyout === CU_NULL; hyout = nothing; end
     if cyout === CU_NULL; cyout = nothing; end
@@ -166,7 +167,7 @@ function _rnnback(dt, t, w, x, hx, cx; rnn, o...)
 end
         
 function _rnnback2(r, w, x, y, dy, hx, cx, dhy, dcy, rs, ws;
-                   handle=CUDNN.handle(), batchSizes=nothing, o...) 
+                   handle=cuDNN.handle(), batchSizes=nothing, o...) 
     @assert value(r.w) === value(w)
     # Input descriptors:
     seqLength = batchSizes==nothing ? size(x,3) : length(batchSizes) # (X,B,T) or (X,B+) with batchSizes
@@ -192,8 +193,8 @@ function _rnnback2(r, w, x, y, dy, hx, cx, dhy, dcy, rs, ws;
     # ws = cudnnWorkSpace()
     wss = bytes(ws)
     rss = bytes(rs)
-    @cudnn_retry CUDNN.unsafe_cudnnRNNBackwardData(handle, r.rnnDesc, seqLength, ytds, y, ytds, dy, dhyDesc, dhy, dcyDesc, dcy, wDesc, w, hxDesc, hx, cxDesc, cx, xtds, dx, dhxDesc, dhx, dcxDesc, dcx, ws, wss, rs, rss)
-    @cudnn_retry CUDNN.unsafe_cudnnRNNBackwardWeights(handle, r.rnnDesc, seqLength, xtds, x, hxDesc, hx, ytds, y, ws, wss, dwDesc, dw, rs, rss)
+    @cudnn_retry cuDNN.unchecked_cudnnRNNBackwardData(handle, r.rnnDesc, seqLength, ytds, y, ytds, dy, dhyDesc, dhy, dcyDesc, dcy, wDesc, w, hxDesc, hx, cxDesc, cx, xtds, dx, dhxDesc, dhx, dcxDesc, dcx, ws, wss, rs, rss)
+    @cudnn_retry cuDNN.unchecked_cudnnRNNBackwardWeights(handle, r.rnnDesc, seqLength, xtds, x, hxDesc, hx, ytds, y, ws, wss, dwDesc, dw, rs, rss)
     # Update the cache
     if dhx===CU_NULL; dhx=nothing; end
     if dcx===CU_NULL; dcx=nothing; end
@@ -227,8 +228,8 @@ end
 function cudnnGetRNNParamsSize(r::RNN)
     res = Csize_t[0]
     xDesc = TD(r.dataType, 1, r.inputSize, 1)    # xDesc: (1,X,B) where X = inputSize, B is ignored, so assume 1
-    dt = CUDNN.cudnnDataType_t(DT(r.dataType))
-    CUDNN.cudnnGetRNNParamsSize(CUDNN.handle(), r.rnnDesc, xDesc, res, dt)
+    dt = cuDNN.cudnnDataType_t(DT(r.dataType))
+    cuDNN.cudnnGetRNNParamsSize(cuDNN.handle(), r.rnnDesc, xDesc, res, dt)
     div(res[1], sizeof(r.dataType))
 end
 
@@ -239,15 +240,15 @@ end
 # hiddenMatrices = (r.direction == 1 ? (L-1)*I : (L-1)*I + div(I,2))
 # biases * H + inputMatrices * X * H + hiddenMatrices * H * H
 
-function cudnnGetRNNWorkspaceSize(rd::RD, tds::TDs; handle=CUDNN.handle())
+function cudnnGetRNNWorkspaceSize(rd::RD, tds::TDs; handle=cuDNN.handle())
     res = Csize_t[1]
-    CUDNN.cudnnGetRNNWorkspaceSize(handle, rd, length(tds), tds, res)
+    cuDNN.cudnnGetRNNWorkspaceSize(handle, rd, length(tds), tds, res)
     return Int(res[1])
 end
 
-function cudnnGetRNNTrainingReserveSize(rd::RD, tds::TDs; handle=CUDNN.handle())
+function cudnnGetRNNTrainingReserveSize(rd::RD, tds::TDs; handle=cuDNN.handle())
     res = Csize_t[1]
-    CUDNN.cudnnGetRNNTrainingReserveSize(handle, rd, length(tds), tds, res)
+    cuDNN.cudnnGetRNNTrainingReserveSize(handle, rd, length(tds), tds, res)
     return Int(res[1])
 end
 
@@ -257,7 +258,7 @@ function cudnnGetFilterNdDescriptor(wDesc::FD; nbDimsRequested = 8)
     format = Cint[0]
     nbDims = Cint[0]
     filterDimA = Vector{Cint}(undef,nbDimsRequested)
-    CUDNN.cudnnGetFilterNdDescriptor(wDesc, nbDimsRequested, dataType, format, nbDims, filterDimA)
+    cuDNN.cudnnGetFilterNdDescriptor(wDesc, nbDimsRequested, dataType, format, nbDims, filterDimA)
     if nbDims[1] > nbDimsRequested
         cudnnGetFilterNdDescriptor(wDesc::FD; nbDimsRequested = nbDims[1])
     else
@@ -295,9 +296,9 @@ function cudnnGetRNNParam(r::RNN, layer::Integer, id::Integer, par::Integer; use
     paramDesc = FD(T,1,1,1,1)
     param = Cptr[0]
     if par == 1 # matrix
-        CUDNN.cudnnGetRNNLinLayerMatrixParams(handle, r.rnnDesc, layer-1, xDesc, wDesc, w, id-1, paramDesc, param)
+        cuDNN.cudnnGetRNNLinLayerMatrixParams(handle, r.rnnDesc, layer-1, xDesc, wDesc, w, id-1, paramDesc, param)
     else # bias
-        CUDNN.cudnnGetRNNLinLayerBiasParams(handle, r.rnnDesc, layer-1, xDesc, wDesc, w, id-1, paramDesc, param)
+        cuDNN.cudnnGetRNNLinLayerBiasParams(handle, r.rnnDesc, layer-1, xDesc, wDesc, w, id-1, paramDesc, param)
     end
     dt,sz = cudnnGetFilterNdDescriptor(paramDesc)
     if should_return_nothing

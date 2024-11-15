@@ -1,5 +1,5 @@
-import CUDA.CUDNN: cudnnMultiHeadAttnForwardAD
-using  CUDA.CUDNN: cudnnMultiHeadAttnBackwardWeights, cudnnMultiHeadAttnBackwardData, cudnnMultiHeadAttnBuffers, handle, CUDNN_WGRAD_MODE_SET
+import cuDNN: cudnnMultiHeadAttnForwardAD
+using  cuDNN: cudnnMultiHeadAttnBackwardWeights, cudnnMultiHeadAttnBackwardData, cudnnMultiHeadAttnBuffers, handle, CUDNN_WGRAD_MODE_SET
 using AutoGrad: AutoGrad, @primitive1, value
 
 

@@ -3,7 +3,7 @@ import Knet
 using Knet.Ops21
 using Knet.KnetArrays: DevArray
 using AutoGrad: Param, value
-using CUDA.CUDNN:
+using cuDNN:
     cudnnNormalizationForward,
     cudnnNormalizationForward!,
     cudnnNormalizationForwardInference,

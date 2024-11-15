@@ -2,7 +2,7 @@ export Conv
 using Knet.Ops21: conv, zeropad, symmetric
 import CUDA
 
-using CUDA.CUDNN:
+using cuDNN:
     cudnnConvolutionForward,
     cudnnConvolutionForward!,
     cudnnConvolutionBackwardFilter,

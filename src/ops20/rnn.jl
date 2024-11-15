@@ -127,7 +127,7 @@ function RNN(inputSize, hiddenSize; h=nothing, c=nothing,
              handle=nothing,
              )
     if handle !== nothing
-        @warn "The handle option is deprecated, GPU implementation using CUDNN.handle()" maxlog=1
+        @warn "The handle option is deprecated, GPU implementation using cuDNN.handle()" maxlog=1
     end
     if dataType !== nothing || usegpu !== nothing
         @warn "dataType and usegpu options are deprecated, using atype=$atype" maxlog=1

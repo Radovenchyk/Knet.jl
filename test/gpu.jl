@@ -31,10 +31,10 @@ if CUDA.functional()
     @test CUBLAS.handle() > Ptr{Nothing}(0) # Knet.cublashandle() > Knet.Cptr(0)
     @show CUBLAS.version() # Knet.cublasVersion
     @test CUBLAS.version() > v"0" # Knet.cublasVersion > 0
-    @show CUDNN.handle() # Knet.cudnnhandle()
-    @test CUDNN.handle() > Ptr{Nothing}(0) # Knet.cudnnhandle() > Knet.Cptr(0)
-    @show CUDNN.version() # Knet.cudnnVersion
-    @test CUDNN.version() > v"0" # Knet.cudnnVersion > 0
+    @show cuDNN.handle() # Knet.cudnnhandle()
+    @test cuDNN.handle() > Ptr{Nothing}(0) # Knet.cudnnhandle() > Knet.Cptr(0)
+    @show cuDNN.version() # Knet.cudnnVersion
+    @test cuDNN.version() > v"0" # Knet.cudnnVersion > 0
     @show Knet.LibKnet8.libknet8
     @test !isempty(Knet.LibKnet8.libknet8)
     @show readdir(artifact"libknet8") # readdir(Knet.dir("deps"))

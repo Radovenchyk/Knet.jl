@@ -19,7 +19,7 @@ function _batchnorm4(T, g, b, x;
                      moments=nothing,
                      eps=1e-5,
                      alpha=1, beta=0,
-                     handle = CUDNN.handle(),
+                     handle = cuDNN.handle(),
                      cache_verbose=false, #reporting cache uses
                      o...)
     y = similar(x)
@@ -51,8 +51,8 @@ function _batchnorm4(T, g, b, x;
             mean = CU_NULL
             ivar = CU_NULL
         end
-        bnmode = CUDNN.cudnnBatchNormMode_t(bnmode)
-        CUDNN.cudnnBatchNormalizationForwardTraining(handle, bnmode, Ref(T(alpha)), Ref(T(beta)), TD(x), x, TD(y), y, TD(g), g, b, momentum, running_mean, running_var, eps, mean, ivar)
+        bnmode = cuDNN.cudnnBatchNormMode_t(bnmode)
+        cuDNN.cudnnBatchNormalizationForwardTraining(handle, bnmode, Ref(T(alpha)), Ref(T(beta)), TD(x), x, TD(y), y, TD(g), g, b, momentum, running_mean, running_var, eps, mean, ivar)
 
         # Cache the resulting mean and inverse variance
         if cache != nothing
@@ -62,8 +62,8 @@ function _batchnorm4(T, g, b, x;
         end
     else
         @assert (moments!==nothing) "You must provide moments for the test mode!"
-        bnmode = CUDNN.cudnnBatchNormMode_t(bnmode)
-        CUDNN.cudnnBatchNormalizationForwardInference(handle, bnmode, Ref(T(alpha)), Ref(T(beta)), TD(x), x, TD(y), y, TD(g), g, b, running_mean, running_var, eps)
+        bnmode = cuDNN.cudnnBatchNormMode_t(bnmode)
+        cuDNN.cudnnBatchNormalizationForwardInference(handle, bnmode, Ref(T(alpha)), Ref(T(beta)), TD(x), x, TD(y), y, TD(g), g, b, running_mean, running_var, eps)
     end
     return y
 end
@@ -87,7 +87,7 @@ function _batchnorm4_back(T, g, x, dy;
                           grad_cache_disabled=false,
                           eps=1e-5, alpha=1, beta=0,
                           dalpha=1, dbeta=0,
-                          handle = CUDNN.handle(),
+                          handle = cuDNN.handle(),
                           cache_verbose=false,
                           o...)
     if training
@@ -104,8 +104,8 @@ function _batchnorm4_back(T, g, x, dy;
         else
             mean, ivar = CU_NULL, CU_NULL
         end
-        bnmode = CUDNN.cudnnBatchNormMode_t(bnmode)
-        CUDNN.cudnnBatchNormalizationBackward(handle, bnmode, Ref(T(alpha)), Ref(T(beta)), Ref(T(dalpha)), Ref(T(dbeta)), TD(x), x, TD(dy), dy, TD(dx), dx, TD(g), g, dg, db, eps, mean, ivar)
+        bnmode = cuDNN.cudnnBatchNormMode_t(bnmode)
+        cuDNN.cudnnBatchNormalizationBackward(handle, bnmode, Ref(T(alpha)), Ref(T(beta)), Ref(T(dalpha)), Ref(T(dbeta)), TD(x), x, TD(dy), dy, TD(dx), dx, TD(g), g, dg, db, eps, mean, ivar)
 
     else
         # At test mode, g .*( x ./ sqrt(var) - mean ./ sqrt(var)) .+ beta

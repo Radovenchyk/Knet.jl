@@ -1,6 +1,6 @@
 using AutoGrad: AutoGrad, @primitive1, value
-import CUDA.CUDNN: cudnnConvolutionForwardAD
-using CUDA.CUDNN:
+import cuDNN: cudnnConvolutionForwardAD
+using cuDNN:
     CUDNN_ACTIVATION_IDENTITY,
     CUDNN_ACTIVATION_RELU,
     CUDNN_NOT_PROPAGATE_NAN,

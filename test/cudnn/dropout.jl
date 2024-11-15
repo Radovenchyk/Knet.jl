@@ -1,5 +1,5 @@
 using Test, CUDA, Knet, AutoGrad
-using CUDA.CUDNN: 
+using cuDNN: 
     cudnnDropoutForward,
     cudnnDropoutForward!,
     cudnnDropoutBackward,

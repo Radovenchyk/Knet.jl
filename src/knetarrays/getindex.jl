@@ -58,7 +58,7 @@ function materialize!(A::SubArray{T,N,<:KnetArray}, B) where {T,N}
 end
 
 # For contiguous I, dotview(A, I...) gives a shared-memory KnetArray rather than a view
-function materialize!(A::KnetArray, B) where {T,N}
+function materialize!(A::KnetArray, B) # where {T,N}
     _A = CuArray(A)
     _B = (B isa KnetArray || B isa AbstractArray ? CuArray(B) : B)
     materialize!(_A, _B)

@@ -1,5 +1,5 @@
 export KnetPtr, Cptr, gc, knetgc
-using CUDA: CUDA, CuArray, CuPtr, unsafe_cuMemAlloc_v2, cuMemFree_v2, device, devices, functional, unsafe_free!
+using CUDA: CUDA, CuArray, CuPtr, unchecked_cuMemAlloc_v2, cuMemFree_v2, device, devices, functional, unsafe_free!
 const Cptr = Ptr{Cvoid}
 const cuallocator = Ref{Bool}(true)
 devid() = Int(device().handle)
@@ -189,7 +189,7 @@ KnetPtr(n::Integer)=KnetPtr(Int(n))
 function knetMalloc(nbytes::Int) # 584μs
     ptr = Cptr[0]
     # ret = @cudart1(cudaMalloc,(Ptr{Cptr},Csize_t),ptr,nbytes)
-    ret = unsafe_cuMemAlloc_v2(ptr, nbytes)
+    ret = unchecked_cuMemAlloc_v2(ptr, nbytes)
     ret == 0 ? ptr[1] : nothing
 end
 

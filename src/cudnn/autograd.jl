@@ -1,4 +1,4 @@
-import CUDA.CUDNN: cudnnTensorDescriptor, cudnnFilterDescriptor
+import cuDNN: cudnnTensorDescriptor, cudnnFilterDescriptor
 using AutoGrad: Value
 
 cudnnTensorDescriptor(x::Value) = cudnnTensorDescriptor(value(x))

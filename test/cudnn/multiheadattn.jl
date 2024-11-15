@@ -1,6 +1,6 @@
 using Test, Random, CUDA, Knet, AutoGrad
 
-using CUDA.CUDNN: 
+using cuDNN: 
     cudnnMultiHeadAttnForward,
     cudnnMultiHeadAttnForward!,
     cudnnMultiHeadAttnBackwardData,

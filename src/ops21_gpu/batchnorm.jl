@@ -1,7 +1,7 @@
 import Knet.Ops21: batchnorm
 using AutoGrad: value
 
-using CUDA.CUDNN:
+using cuDNN:
     cudnnNormalizationForward,
     cudnnNormalizationForward!,
     cudnnNormalizationForwardInference,

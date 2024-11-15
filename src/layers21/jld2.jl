@@ -1,5 +1,5 @@
 import JLD2
-using CUDA.CUDNN: cudnnConvolutionDescriptor
+using cuDNN: cudnnConvolutionDescriptor
 
 JLD2.writeas(::Type{cudnnConvolutionDescriptor}) = Nothing
 JLD2.wconvert(::Type{Nothing}, c::cudnnConvolutionDescriptor) = nothing

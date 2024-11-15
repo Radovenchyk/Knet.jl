@@ -1,7 +1,7 @@
 import Knet.Ops21: pool
 using Statistics: mean
 
-using CUDA.CUDNN:
+using cuDNN:
     cudnnPoolingForward,
     cudnnPoolingForward!,
     cudnnPoolingBackward,

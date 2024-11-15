@@ -3,7 +3,7 @@ using Knet.Ops20: logp, logsumexp, softmax, ∇softmax, logsoftmax, ∇logsoftma
 using Knet.Ops20_gpu: _cudnnSoftmaxForward, _cudnnSoftmaxBackward
 using Knet.KnetArrays: KnetArray
 using CUDA: CUDA, functional
-using CUDA.CUDNN: CUDNN_SOFTMAX_FAST, CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_LOG
+using cuDNN: CUDNN_SOFTMAX_FAST, CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_LOG
 using AutoGrad: grad, gradcheck, @gcheck, Param
 
 @testset "loss" begin

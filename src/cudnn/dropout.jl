@@ -1,5 +1,5 @@
-import CUDA.CUDNN: cudnnDropoutForwardAD
-using CUDA.CUDNN: cudnnDropoutBackward, handle
+import cuDNN: cudnnDropoutForwardAD
+using cuDNN: cudnnDropoutBackward, handle
 using AutoGrad: AutoGrad, @primitive1, value
 
 @primitive1((cudnnDropoutForwardAD(x; xDesc, y, yDesc, dropoutDesc, reserveSpace),

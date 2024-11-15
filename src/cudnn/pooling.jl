@@ -1,5 +1,5 @@
-import CUDA.CUDNN: cudnnPoolingForwardAD
-using CUDA.CUDNN: cudnnPoolingBackward, handle
+import cuDNN: cudnnPoolingForwardAD
+using cuDNN: cudnnPoolingBackward, handle
 using AutoGrad: AutoGrad, @primitive1, value
 
 @primitive1((cudnnPoolingForwardAD(x; poolingDesc, alpha, beta, xDesc, yDesc, y),

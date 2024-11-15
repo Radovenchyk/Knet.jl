@@ -1,6 +1,6 @@
 using Test, Random, CUDA, Knet, AutoGrad, Statistics
 
-using CUDA.CUDNN:
+using cuDNN:
     cudnnNormalizationForward,
     cudnnNormalizationForward!,
     cudnnNormalizationForwardInference,

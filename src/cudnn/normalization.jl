@@ -1,6 +1,6 @@
-import CUDA.CUDNN: cudnnNormalizationForwardAD
+import cuDNN: cudnnNormalizationForwardAD
 import AutoGrad: forw
-using CUDA.CUDNN: handle, CU_NULL, cudnnNormalizationBackward, cudnnNormalizationForwardTraining, cudnnNormalizationForwardInference, cudnnGetNormalizationForwardTrainingWorkspaceSize, cudnnGetNormalizationTrainingReserveSpaceSize, cudnnTempSpace, scalingParameter
+using cuDNN: handle, CU_NULL, cudnnNormalizationBackward, cudnnNormalizationForwardTraining, cudnnNormalizationForwardInference, cudnnGetNormalizationForwardTrainingWorkspaceSize, cudnnGetNormalizationTrainingReserveSpaceSize, cudnnTempSpace, scalingParameter
 using AutoGrad: AutoGrad, @primitive1, forwargs, recording, Result, value
 
 

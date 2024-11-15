@@ -1,6 +1,6 @@
 import Knet.Ops21: conv, relu
 
-using CUDA.CUDNN:
+using cuDNN:
     cudnnConvolutionForward,
     cudnnConvolutionForward!,
     cudnnConvolutionBackwardFilter,

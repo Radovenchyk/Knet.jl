@@ -2,8 +2,8 @@ import Knet.Ops20: softmax, logsoftmax
 using Knet.Ops20: _softmax, _logsoftmax
 using Knet.KnetArrays: DevArray
 using AutoGrad: AutoGrad, @primitive1, Value
-using CUDA.CUDNN: CUDNN, unsafe_cudnnSoftmaxForward, unsafe_cudnnSoftmaxBackward #, handle
-using CUDA.CUDNN: CUDNN_SOFTMAX_FAST, CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_LOG, CUDNN_SOFTMAX_MODE_INSTANCE
+using cuDNN: cuDNN, unchecked_cudnnSoftmaxForward, unchecked_cudnnSoftmaxBackward #, handle
+using cuDNN: CUDNN_SOFTMAX_FAST, CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_LOG, CUDNN_SOFTMAX_MODE_INSTANCE
 #include("cudnn_retry.jl") # @cudnn_retry
 
 
@@ -44,14 +44,14 @@ end
 function _cudnnSoftmaxForward(x::R; algo) where {T,R<:DevArray{T}}
     mode = CUDNN_SOFTMAX_MODE_INSTANCE
     y = similar(x)
-    @cudnn_retry unsafe_cudnnSoftmaxForward(CUDNN.handle(), algo, mode, Ref(T(1)), TD4(x), x, Ref(T(0)), TD4(y), y)
+    @cudnn_retry unchecked_cudnnSoftmaxForward(cuDNN.handle(), algo, mode, Ref(T(1)), TD4(x), x, Ref(T(0)), TD4(y), y)
     return y
 end
 
 function _cudnnSoftmaxBackward(y::R, dy::R; algo) where {T,R<:DevArray{T}}
     mode = CUDNN_SOFTMAX_MODE_INSTANCE
     dx = similar(y)
-    @cudnn_retry unsafe_cudnnSoftmaxBackward(CUDNN.handle(), algo, mode, Ref(T(1)), TD4(y), y, TD4(dy), dy, Ref(T(0)), TD4(dx), dx)
+    @cudnn_retry unchecked_cudnnSoftmaxBackward(cuDNN.handle(), algo, mode, Ref(T(1)), TD4(y), y, TD4(dy), dy, Ref(T(0)), TD4(dx), dx)
     return dx
 end
 

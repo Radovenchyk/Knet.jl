@@ -1,3 +1,77 @@
+2024-11-11  dyuret  <dyuret@login02.kuacc.ku.edu.tr>
+
+	* v1.4.11: compatibility update
+	julia-1.11.1
+	AutoGrad-1.2.5
+	CUDA-5.5.2
+	FileIO-1.16.4
+	ImageCore-0.10.4
+	ImageMagick-1.4.0
+	JLD2-0.5.8
+	NNLib-0.9.24
+	SpecialFunctions-2.4.0
+	TimerOutputs-0.5.25
+
+	ERROR: LoadError: UndefVarError: `CUDNN` not defined in `CUDA`
+	pkg"add cuDNN" # it has been separated
+	ERROR: LoadError: InitError: could not load library "/kuacc/users/dyuret/.julia/artifacts/8e7456794f147517aa9ba5a1147e4ecedffbbfa1/lib/libcudnn_cnn.so"
+	/lib64/libm.so.6: version `GLIBC_2.27' not found (required by /kuacc/users/dyuret/.julia/artifacts/8e7456794f147517aa9ba5a1147e4ecedffbbfa1/lib/libcudnn_cnn.so)
+	LD_LIBRARY_PATH=/userfiles/dyuret/.julia/conda/3/x86_64/envs/kare/lib:$LD_LIBRARY_PATH julia --project # did not work
+	pkg"add cuDNN@1.3" # worked.
+	module add glibc/2.27 # did not work
+
+	WARNING: could not import CUDA.unsafe_cuMemAlloc_v2 into KnetArrays
+	WARNING: method definition for materialize! at /kuacc/users/dyuret/.julia/dev/Knet/src/knetarrays/getindex.jl:61 declares type variable N but does not use it.
+	WARNING: could not import cuDNN.unsafe_cudnnSoftmaxForward into Ops20_gpu
+	WARNING: could not import cuDNN.unsafe_cudnnSoftmaxBackward into Ops20_gpu
+	unsafe->unchecked
+
+	│  WARNING: Wrapping `Vararg` directly in UnionAll is deprecated (wrap the tuple instead).
+	│  You may need to write `f(x::Vararg{T})` rather than `f(x::Vararg{<:T})` or `f(x::Vararg{T}) where T` instead of `f(x::Vararg{T} where T)`.
+
+	gpu: Error During Test at /kuacc/users/dyuret/.julia/dev/Knet/test/gpu.jl:3
+	Got exception outside of a @test
+	UndefVarError: `toolkit` not defined in `CUDA`
+
+	gcnode: Error During Test at /kuacc/users/dyuret/.julia/dev/Knet/test/gcnode.jl:8
+	Got exception outside of a @test
+	UndefVarError: `cudnnSetRNNDescriptor_v6` not defined in `cuDNN`
+
+	bmm: Error During Test at /kuacc/users/dyuret/.julia/dev/Knet/test/bmm.jl:19
+	Test threw exception
+	Expression: gradcheck(bmmul1, w)
+	could not load symbol "jl_array_isassigned":
+	[1] _cuarrays(x::Vector{Array{Float32, 3}}, c::Vector{CuArray}, d::IdDict{Any, Bool})
+	@ Knet.CuArrays ~/.julia/dev/Knet/src/cuarrays/cubytes.jl:27
+
+	jld2serialize: Error During Test at /kuacc/users/dyuret/.julia/dev/Knet/test/serialize.jl:9
+	Got exception outside of a @test
+	could not load symbol "jl_array_isassigned":
+	/userfiles/dyuret/.julia/juliaup/julia-1.11.1+0.x64.linux.gnu/bin/julia: undefined symbol: jl_array_isassigned
+	[1] _ser_array_t(x::Any, T::Type, s::IdDict{Any, Any}, m::Val{2})
+	@ Knet.KnetArrays ~/.julia/dev/Knet/src/knetarrays/deepcopy.jl:64
+
+	loss: Error During Test at /kuacc/users/dyuret/.julia/dev/Knet/test/loss.jl:17
+	Test threw exception
+	Expression: gradcheck(f, k)
+	MethodError: no method matching unsafe_convert(::Type{Ptr{cuDNN.cudnnTensorStruct}}, ::Knet.Ops20_gpu.TD)
+	The function `unsafe_convert` exists, but no method is defined for this combination of argument types.
+
+	gpuconv: Error During Test at /kuacc/users/dyuret/.julia/dev/Knet/test/conv.jl:120
+	Test threw exception
+	Expression: isapprox(pool(kx), pool(ax))
+	MethodError: no method matching unsafe_convert(::Type{Ptr{cuDNN.cudnnPoolingStruct}}, ::Knet.Ops20_gpu.PD)
+	The function `unsafe_convert` exists, but no method is defined for this combination of argument types.
+
+	rnn.jl	rnn: Error During Test at /kuacc/users/dyuret/.julia/dev/Knet/test/rnn.jl:48
+	Test threw exception
+	Expression: eq(rnnforw(r, w, x1), rnntest(r, w, x1))
+	UndefVarError: `cudnnSetRNNDescriptor_v6` not defined in `cuDNN`
+
+	reduction.jl	WARNING: Method definition (::Type{Main.Combinas{T}})(Any, Any) in module Main at /kuacc/users/dyuret/.julia/dev/Knet/test/combinatorics.jl:6 overwritten on the same line (check for duplicate calls to `include`).
+	WARNING: Method definition iterate(Main.Permutas{T} where T, Any) in module Main at /kuacc/users/dyuret/.julia/dev/Knet/test/combinatorics.jl:53 overwritten on the same line (check for duplicate calls to `include`).
+
+
 2021-02-13  Deniz Yuret  <dyuret@WS001>
 
 	* todo:

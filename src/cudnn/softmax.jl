@@ -1,5 +1,5 @@
-import CUDA.CUDNN: cudnnSoftmaxForwardAD
-using CUDA.CUDNN: cudnnSoftmaxBackward, handle
+import cuDNN: cudnnSoftmaxForwardAD
+using cuDNN: cudnnSoftmaxBackward, handle
 using AutoGrad: AutoGrad, @primitive1, value
 
 @primitive1((cudnnSoftmaxForwardAD(x; algo, mode, alpha, xDesc, beta, yDesc, y),

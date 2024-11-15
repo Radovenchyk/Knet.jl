@@ -1,7 +1,7 @@
-import CUDA.CUDNN: cudnnRNNForwardAD
+import cuDNN: cudnnRNNForwardAD
 import AutoGrad: forw
 using AutoGrad: AutoGrad, @primitive1, value, forwargs, recording, Result, @zerograd
-using CUDA.CUDNN: 
+using cuDNN: 
     cudnnRNNBackwardWeights_v8,
     cudnnRNNBackwardData_v8,
     cudnnRNNTempSpaceSizes,
